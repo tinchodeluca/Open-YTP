@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Fiamy VERSION 1.0 LANGUAGES CXX)
+project(OpenYTP VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -13,108 +13,133 @@ find_package(Qt6 6.10 REQUIRED COMPONENTS
 )
 qt_standard_project_setup()
 
+# ─────────────────────────────────────────────────────
+#  Fuentes C++
+# ─────────────────────────────────────────────────────
 set(SRC
-    main.cpp
-    audiocaptureanalyzer.cpp
-    youtubedownloader.cpp
+    src/main.cpp
+    src/audiocaptureanalyzer.cpp
+    src/youtubedownloader.cpp
 )
 set(HEADERS
-    audiocaptureanalyzer.h
-    youtubedownloader.h
-)
-set(QML_FILES
-    Main.qml
-    components/ActionButtons.qml
-    components/AudioVisualizer.qml
-    components/BookmarkPlayer.qml
-    components/PlayerCard.qml
-    components/PlayerControls.qml
-    components/ProgressBar.qml
-    components/SongInfo.qml
-    components/VisualizerBar.qml
-    components/VisualizerBars.qml
-    components/VolumeControl.qml
-    components/YoutubeQueueInput.qml
-    components/QueueDrawer.qml
-)
-set(RESOURCE_FILES
-    pink.png
-    pink.ico
+    src/audiocaptureanalyzer.h
+    src/youtubedownloader.h
 )
 
+# ─────────────────────────────────────────────────────
+#  Archivos QML
+# ─────────────────────────────────────────────────────
+set(QML_FILES
+    ui/Main.qml
+
+    # Componentes de UI
+    ui/components/ActionButtons.qml
+    ui/components/AudioVisualizer.qml
+    ui/components/BookmarkPlayer.qml
+    ui/components/PlayerCard.qml
+    ui/components/PlayerControls.qml
+    ui/components/ProgressBar.qml
+    ui/components/SongInfo.qml
+    ui/components/VisualizerBar.qml
+    ui/components/VisualizerBars.qml
+    ui/components/VolumeControl.qml
+    ui/components/YoutubeQueueInput.qml
+    ui/components/QueueDrawer.qml
+
+    # Themes
+    ui/themes/ThemeManager.qml
+)
+
+# ─────────────────────────────────────────────────────
+#  Recursos (íconos, imágenes)
+# ─────────────────────────────────────────────────────
+set(RESOURCE_FILES
+    resources/pink.png
+    resources/pink.ico
+)
+
+# ─────────────────────────────────────────────────────
+#  ThirdParty headers
+# ─────────────────────────────────────────────────────
 file(GLOB THIRD_PARTY_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/*.h")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty" PREFIX "ThirdParty" FILES ${THIRD_PARTY_HEADERS})
 
-qt_add_executable(Fiamy
+# ─────────────────────────────────────────────────────
+#  Ejecutable
+# ─────────────────────────────────────────────────────
+qt_add_executable(OpenYTP
     ${SRC}
     ${HEADERS}
     ${THIRD_PARTY_HEADERS}
 )
 
 if(WIN32)
-    set_target_properties(Fiamy PROPERTIES
-        WIN32_EXECUTABLE TRUE
-    )
+    set_target_properties(OpenYTP PROPERTIES WIN32_EXECUTABLE TRUE)
     set(ICON_RC "${CMAKE_CURRENT_BINARY_DIR}/icon.rc")
-    file(WRITE ${ICON_RC} "IDI_ICON1 ICON DISCARDABLE \"${CMAKE_CURRENT_SOURCE_DIR}/pink.ico\"\n")
-    target_sources(Fiamy PRIVATE ${ICON_RC})
+    file(WRITE ${ICON_RC} "IDI_ICON1 ICON DISCARDABLE \"${CMAKE_CURRENT_SOURCE_DIR}/resources/pink.ico\"\n")
+    target_sources(OpenYTP PRIVATE ${ICON_RC})
 endif()
 
-target_include_directories(Fiamy PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+target_include_directories(OpenYTP PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
 )
 
-# 🔥 En Debug: NO empaquetar QML en recursos, usar archivos directos
+# ─────────────────────────────────────────────────────
+#  Módulo QML — Debug (hot reload) vs Release
+# ─────────────────────────────────────────────────────
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    message(STATUS "🔥 Modo DEBUG: Hot reload habilitado")
+    message(STATUS "🔥 DEBUG: hot reload habilitado")
     add_compile_definitions(QT_QML_DEBUG)
 
-    qt_add_qml_module(Fiamy
-        URI Fiamy
+    qt_add_qml_module(OpenYTP
+        URI OpenYTP
         VERSION 1.0
         QML_FILES ${QML_FILES}
         NO_RESOURCE_TARGET_PATH
     )
 
-    # Copiar archivos QML al directorio de build
     foreach(QML_FILE ${QML_FILES})
         get_filename_component(QML_FILE_DIR ${QML_FILE} DIRECTORY)
-        add_custom_command(TARGET Fiamy POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_CURRENT_SOURCE_DIR}/${QML_FILE}"
-                "$<TARGET_FILE_DIR:Fiamy>/${QML_FILE}"
-            COMMENT "Copiando ${QML_FILE} para hot reload"
-        )
-        # Crear directorios si no existen
         if(QML_FILE_DIR)
-            add_custom_command(TARGET Fiamy POST_BUILD
+            add_custom_command(TARGET OpenYTP POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory
-                    "$<TARGET_FILE_DIR:Fiamy>/${QML_FILE_DIR}"
+                    "$<TARGET_FILE_DIR:OpenYTP>/${QML_FILE_DIR}"
             )
         endif()
+        add_custom_command(TARGET OpenYTP POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/${QML_FILE}"
+                "$<TARGET_FILE_DIR:OpenYTP>/${QML_FILE}"
+            COMMENT "Hot reload: copiando ${QML_FILE}"
+        )
     endforeach()
 else()
-    # En Release: empaquetar normalmente en recursos
-    message(STATUS "📦 Modo RELEASE: QML empaquetado en recursos")
-    qt_add_qml_module(Fiamy
-        URI Fiamy
+    message(STATUS "📦 RELEASE: QML empaquetado en recursos")
+    qt_add_qml_module(OpenYTP
+        URI OpenYTP
         VERSION 1.0
         QML_FILES ${QML_FILES}
     )
 endif()
 
-qt_add_resources(Fiamy "resources"
+# ─────────────────────────────────────────────────────
+#  Recursos Qt
+# ─────────────────────────────────────────────────────
+qt_add_resources(OpenYTP "resources"
     PREFIX "/"
     FILES ${RESOURCE_FILES}
 )
 
+# ─────────────────────────────────────────────────────
+#  Librerías
+# ─────────────────────────────────────────────────────
 add_library(miniaudio INTERFACE)
 target_include_directories(miniaudio INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
 )
 
-target_link_libraries(Fiamy PRIVATE
+target_link_libraries(OpenYTP PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -124,15 +149,18 @@ target_link_libraries(Fiamy PRIVATE
     miniaudio
 )
 
+# ─────────────────────────────────────────────────────
+#  Copiar yt-dlp.exe al build (solo Windows)
+# ─────────────────────────────────────────────────────
 if(WIN32)
-    if(EXISTS "${CMAKE_SOURCE_DIR}/yt-dlp.exe")
-        add_custom_command(TARGET Fiamy POST_BUILD
+    if(EXISTS "${CMAKE_SOURCE_DIR}/thirdparty/yt-dlp.exe")
+        add_custom_command(TARGET OpenYTP POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_SOURCE_DIR}/yt-dlp.exe"
-                "$<TARGET_FILE_DIR:Fiamy>/yt-dlp.exe"
-            COMMENT "Copiando yt-dlp.exe al directorio de salida"
+                "${CMAKE_SOURCE_DIR}/thirdparty/yt-dlp.exe"
+                "$<TARGET_FILE_DIR:OpenYTP>/yt-dlp.exe"
+            COMMENT "Copiando yt-dlp.exe"
         )
     else()
-        message(STATUS "yt-dlp.exe no encontrado - se descargará automáticamente al ejecutar")
+        message(STATUS "yt-dlp.exe no encontrado — se descargará automáticamente")
     endif()
 endif()
